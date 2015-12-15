@@ -74,7 +74,7 @@ void BMPmake(unsigned char* bitmap)
   bitmap[22] = N & 0xFF;
   bitmap[23] = (N >> 8) & 0xFF;
   bitmap[24] = (N >> 16) & 0xFF;
-  bitmap[35] = (N >> 24) & 0xFF;
+  bitmap[25] = (N >> 24) & 0xFF;
 
 
 
@@ -146,8 +146,129 @@ if(cuda){
 __global__ void bmpCUDA(int *ary, int N)
 {
 //	int i;
-	ary[threadIdx.x]*=2;
+	if(threadIdx.x<54){
+		switch(threadIdx.x)
+		{
+		case 0:{
+		ary[threadIdx.x]='B'; 
+		
+		break;
+		}
 
+		case 1:{
+		ary[threadIdx.x]='M' ;
+		
+		break;
+		}
+
+		
+		case 14:{
+  		ary[threadIdx.x] = 40;
+
+		break;
+		}
+
+
+		//HEIGHT AND WIDTH
+
+		case 18:{
+  		ary[threadIdx.x] = N & 0xFF;
+
+		break;
+
+		}
+
+		case 19:{
+  		ary[threadIdx.x] = (N >> 8) & 0xFF;
+
+		break;
+		}
+
+		case 20:{
+  		ary[threadIdx.x] = (N >> 16) & 0xFF;
+
+		break;
+		}
+
+		case 21:{
+  		ary[threadIdx.x] = (N >> 24) & 0xFF;
+
+		break;
+		}	
+
+
+		case 22:{
+  		ary[threadIdx.x] = N & 0xFF;
+
+
+		break;
+		}
+
+		case 23:{
+  		ary[threadIdx.x] = (N >> 8) & 0xFF;
+
+		break;
+		}
+
+		case 24:{
+  		ary[threadIdx.x] = (N >> 16) & 0xFF;
+
+		break;
+		}
+
+		case 25:{
+  		ary[threadIdx.x] = (N >> 24) & 0xFF;
+
+		break;
+		}	
+
+		case 28:{
+  		ary[threadIdx.x] = 24;
+
+		break;
+		}
+		
+		case 34:{
+  		ary[threadIdx.x] = 255;
+
+		break;
+		}
+
+		case 41:{
+  		ary[threadIdx.x] = 48;
+
+		break;
+		}
+
+		case 42:{
+  		ary[threadIdx.x] = 177;
+
+		break;
+		}
+
+		case 44:{
+  		ary[threadIdx.x] = 48;
+
+		break;
+		}
+
+		case 45:{
+  		ary[threadIdx.x] = 177;
+		break;
+		}
+
+		default:{
+		
+  		ary[threadIdx.x] = 0;
+		}
+	
+		}
+	}
+	else{	
+	   if(threadIdx.x%2==0){ary[threadIdx.x] = 0;}
+	    else{ary[threadIdx.x]=255;}
+  
+	}
 
 
 
