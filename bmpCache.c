@@ -102,7 +102,7 @@ void BMPmake(unsigned char* bitmap)
   // -- PIXEL DATA -- //
   for( i = 54; i < length; i++) {
     //pixels are written here
-    if(i%5==0){bitmap[i] = 0;}
+    if(i%13==0){bitmap[i] = 0;}
     else{bitmap[i]=235;}
   }
 }
@@ -111,7 +111,7 @@ void BMPwrite()
 {
   int i;
   FILE *file;
-  file = fopen("bitmap.bmp", "w+");
+  file = fopen("cache.bmp", "w+");
   for(i = 0; i < length; i+=8)
     {
       putc(bmp[i], file);
@@ -145,7 +145,7 @@ int main(){
     // verification of the color matrix
     for(j=54; j<length; j++)
       {
-	if(j%5==0) {
+	if(j%13==0) {
 	  if(bmp[j] == 0) // verifying the non-colored pixel
 	    {
 	      verify++;
