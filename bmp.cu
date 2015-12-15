@@ -5,9 +5,9 @@
 
 
 
-int N=300;
-int length=54+3*N*N;
-char *bmp; 
+int N=1024;
+unsigned long length=54+3*N*N;
+unsigned char *bmp; 
 
 int screenh=N;
 int screenw=N;
@@ -22,7 +22,7 @@ typedef struct{
 
 
 
-void BMPmake(char* bitmap)
+void BMPmake(unsigned char* bitmap)
 {
   // -- FILE HEADER -- //
 
@@ -59,7 +59,12 @@ void BMPmake(char* bitmap)
   bitmap[20] = (N >> 16) & 0xFF;
   bitmap[21] = (N >> 24) & 0xFF;
 
-
+ fprintf(stdout,  "1: %c 2: %c 3: %c 4: %c",
+ &bitmap[18],
+ &bitmap[19],
+ &bitmap[20] ,
+ &bitmap[21] 
+);
 
   // height of the image
   //bitmap[22] = N;
@@ -144,7 +149,7 @@ __global__ void bmpCUDA(int *ary, int N)
 int main(){
     
   int i;
-  bmp=(char *) malloc(length*sizeof(char));
+  bmp=(unsigned char *) malloc(length*sizeof(unsigned char));
    
 	
   /* for(k=0;k<screenw;k++){ */
@@ -176,7 +181,7 @@ for (i =0; i<10; i++){
     
  	 gettimeofday(&begin, NULL);
 	 BMPmake(bmp);
-	//BMPwrite();
+	 BMPwrite();
  	 gettimeofday(&end, NULL);
 
 	  fprintf(stdout, "time = %lf\n", (end.tv_sec-begin.tv_sec) + (end.tv_usec-begin.tv_usec)*1.0/1000000);
