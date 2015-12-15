@@ -5,7 +5,7 @@
 
 
 
-int N=200;
+int N=300;
 int length=54+3*N*N;
 char *bmp; 
 
@@ -31,10 +31,10 @@ void BMPmake(char* bitmap)
   bitmap[1] = 'M';
 
   // file size
-  bitmap[2] = 255; // 40 + 14 + 12
-  bitmap[3] = 3;
-  bitmap[4] = 0;
-  bitmap[5] = 0;
+  bitmap[2] = length & 0xFF; // 40 + 14 + 12
+  bitmap[3] = (length >> 8) & 0xFF;
+  bitmap[4] = (length >> 16) & 0xFF;
+  bitmap[5] = (length >> 24) & 0xFF;
 
   // reserved field (in hex. 00 00 00 00)
   int i;
@@ -51,12 +51,26 @@ void BMPmake(char* bitmap)
   for( i = 15; i < 18; i++) bitmap[i] = 0;
 
   // width of the image
-  bitmap[18] = N;
-  for( i = 19; i < 22; i++) bitmap[i] = 0;
+  //bitmap[18] = N;
+  //for( i = 19; i < 22; i++) bitmap[i] = 0;
+
+  bitmap[18] = N & 0xFF;
+  bitmap[19] = (N >> 8) & 0xFF;
+  bitmap[20] = (N >> 16) & 0xFF;
+  bitmap[21] = (N >> 24) & 0xFF;
+
+
 
   // height of the image
-  bitmap[22] = N;
-  for( i = 23; i < 26; i++) bitmap[i] = 0;
+  //bitmap[22] = N;
+  //for( i = 23; i < 26; i++) bitmap[i] = 0;
+
+  bitmap[22] = N & 0xFF;
+  bitmap[23] = (N >> 8) & 0xFF;
+  bitmap[24] = (N >> 16) & 0xFF;
+  bitmap[35] = (N >> 24) & 0xFF;
+
+
 
   // reserved field
   bitmap[26] = 1;
@@ -95,6 +109,8 @@ void BMPmake(char* bitmap)
 
   // -- PIXEL DATA -- //
   for( i = 54; i < length; i++) {
+    
+	//pixels are written here
     if(i%2==0){bitmap[i] = 0;}
     else{bitmap[i]=255;}
   }
@@ -127,7 +143,7 @@ __global__ void bmpCUDA(int *ary, int N)
 
 int main(){
     
-  int i,j,k;
+  int i;
   bmp=(char *) malloc(length*sizeof(char));
    
 	
@@ -149,8 +165,8 @@ arr = (int *) malloc( length*sizeof(int));
      
   gettimeofday(&begin, NULL);
 
-  bmpCUDA<<<1, N>>>(arr, N);
-  BMPwrite();
+  bmpCUDA<<<1, length>>>(arr, length);
+ // BMPwrite();
   gettimeofday(&end, NULL);
 
   fprintf(stdout, "time = %lf\n", (end.tv_sec-begin.tv_sec) + (end.tv_usec-begin.tv_usec)*1.0/1000000);
@@ -160,7 +176,7 @@ for (i =0; i<10; i++){
     
  	 gettimeofday(&begin, NULL);
 	 BMPmake(bmp);
-	BMPwrite();
+	//BMPwrite();
  	 gettimeofday(&end, NULL);
 
 	  fprintf(stdout, "time = %lf\n", (end.tv_sec-begin.tv_sec) + (end.tv_usec-begin.tv_usec)*1.0/1000000);
