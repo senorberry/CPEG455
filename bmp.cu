@@ -111,9 +111,9 @@ __global__ void cudaColor (byte_t* bmp)
 {
   int col = threadIdx.x + blockIdx.x * blockDim.x;
   int row = threadIdx.y + blockIdx.y * blockDim.y;
-  bmp [3*(col + row * N)] = ((row & 0x20) ? 192 : 64);
-  bmp [3*(col + row * N) + 1] = ((col & 0x20) ? 192 : 64);
-  bmp [3*(col + row * N) + 2] = ((row & 0x80) || (col & 0x80) ? 192 : 64);
+  bmp [3*(col + row * N)] = ((row & 0x20) ? 235 : 64);
+  // bmp [3*(col + row * N) + 1] = ((col & 0x20) ? 192 : 64);
+  // bmp [3*(col + row * N) + 2] = ((row & 0x80) || (col & 0x80) ? 192 : 64);
 }
 
 int main()
