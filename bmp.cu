@@ -3,29 +3,33 @@
 #include <sys/time.h>
 #include <stdlib.h>
 
+#define N 1024
+#define length 54+(3*N*N)
 
+#define screenh N
+#define screenw N
 
-int N=1024;
-unsigned long length=54+3*N*N;
-unsigned char *bmp; 
-
-int screenh=N;
-int screenw=N;
-
-
-
-typedef struct{
-  int r;
-  int g;
-  int b;
-} color;
-
-
+void BMPwrite(unsigned char* bmp)
+{
+  int i;
+  FILE *file;
+  file = fopen("cuda.bmp", "w+");
+  for(i = 0; i < length; i+=8)
+    {
+      putc(bmp[i], file);
+      putc(bmp[i+1], file);
+      putc(bmp[i+2], file);
+      putc(bmp[i+3], file);
+      putc(bmp[i+4], file);
+      putc(bmp[i+5], file);
+      putc(bmp[i+6], file);
+      putc(bmp[i+7], file);
+    }
+  fclose(file);
+}
 
 void BMPmake(unsigned char* bitmap)
 {
-  // -- FILE HEADER -- //
-
   // bitmap signature
   bitmap[0] = 'B';
   bitmap[1] = 'M';
@@ -50,42 +54,20 @@ void BMPmake(unsigned char* bitmap)
   bitmap[14] = 40;
   for( i = 15; i < 18; i++) bitmap[i] = 0;
 
-  // width of the image
-  //bitmap[18] = N;
-  //for( i = 19; i < 22; i++) bitmap[i] = 0;
-
   bitmap[18] = N & 0xFF;
   bitmap[19] = (N >> 8) & 0xFF;
   bitmap[20] = (N >> 16) & 0xFF;
   bitmap[21] = (N >> 24) & 0xFF;
-
-//debug
-/* fprintf(stdout,  "1: %c 2: %c 3: %c 4: %c",
- &bitmap[18],
- &bitmap[19],
- &bitmap[20] ,
- &bitmap[21] 
-);*/
-
-  // height of the image
-  //bitmap[22] = N;
-  //for( i = 23; i < 26; i++) bitmap[i] = 0;
-
   bitmap[22] = N & 0xFF;
   bitmap[23] = (N >> 8) & 0xFF;
   bitmap[24] = (N >> 16) & 0xFF;
   bitmap[25] = (N >> 24) & 0xFF;
-
-
-
   // reserved field
   bitmap[26] = 1;
   bitmap[27] = 0;
-
   // number of bits per pixel
   bitmap[28] = 24; // 3 byte
   bitmap[29] = 0;
-
   // compression method (no compression here)
   for( i = 30; i < 34; i++) bitmap[i] = 0;
 
@@ -113,211 +95,103 @@ void BMPmake(unsigned char* bitmap)
   // number of important colors
   for( i = 50; i < 54; i++) bitmap[i] = 0;
 
-  // -- PIXEL DATA -- //
+  // THIS IS BEING OFFLOADED TO THE GPU
+  // -- PIXEL DATA -- 
   for( i = 54; i < length; i++) {
-    
-	//pixels are written here
-    if(i%2==0){bitmap[i] = 0;}
-    else{bitmap[i]=255;}
+    bitmap[i] = 0;
   }
 }
 
-void BMPwrite(bool cuda)
+// should be consuming:
+// - an array of chars, that will be the image
+// - a FILE struct
+// kernel forces every thread to color one character
+// to the FILE object
 
-{
-  int i;
-  FILE *file;
-if(cuda){
-  file = fopen("cuda.bmp", "w+");
-}else
-{
-
-  file = fopen("cache.bmp", "w+");
-} 
-
- for(i = 0; i < length; i++)
-    {
-      putc(bmp[i], file);
-    }
-  fclose(file);
-}
-
-
-__global__ void bmpCUDA(int *ary, int N)
-{
-//	int i;
-	if(threadIdx.x<54){
-		switch(threadIdx.x)
-		{
-		case 0:{
-		ary[threadIdx.x]='B'; 
-		
-		break;
-		}
-
-		case 1:{
-		ary[threadIdx.x]='M' ;
-		
-		break;
-		}
-
-		
-		case 14:{
-  		ary[threadIdx.x] = 40;
-
-		break;
-		}
-
-
-		//HEIGHT AND WIDTH
-
-		case 18:{
-  		ary[threadIdx.x] = N & 0xFF;
-
-		break;
-
-		}
-
-		case 19:{
-  		ary[threadIdx.x] = (N >> 8) & 0xFF;
-
-		break;
-		}
-
-		case 20:{
-  		ary[threadIdx.x] = (N >> 16) & 0xFF;
-
-		break;
-		}
-
-		case 21:{
-  		ary[threadIdx.x] = (N >> 24) & 0xFF;
-
-		break;
-		}	
-
-
-		case 22:{
-  		ary[threadIdx.x] = N & 0xFF;
-
-
-		break;
-		}
-
-		case 23:{
-  		ary[threadIdx.x] = (N >> 8) & 0xFF;
-
-		break;
-		}
-
-		case 24:{
-  		ary[threadIdx.x] = (N >> 16) & 0xFF;
-
-		break;
-		}
-
-		case 25:{
-  		ary[threadIdx.x] = (N >> 24) & 0xFF;
-
-		break;
-		}	
-
-		case 28:{
-  		ary[threadIdx.x] = 24;
-
-		break;
-		}
-		
-		case 34:{
-  		ary[threadIdx.x] = 255;
-
-		break;
-		}
-
-		case 41:{
-  		ary[threadIdx.x] = 48;
-
-		break;
-		}
-
-		case 42:{
-  		ary[threadIdx.x] = 177;
-
-		break;
-		}
-
-		case 44:{
-  		ary[threadIdx.x] = 48;
-
-		break;
-		}
-
-		case 45:{
-  		ary[threadIdx.x] = 177;
-		break;
-		}
-
-		default:{
-		
-  		ary[threadIdx.x] = 0;
-		}
-	
-		}
-	}
-	else{	
-	   if(threadIdx.x%2==0){ary[threadIdx.x] = 0;}
-	    else{ary[threadIdx.x]=255;}
+__global__ void cudaColor(unsigned char *bmp)
+{ // only one block, whose dimension is half the length
+  int col = threadIdx.x;
+  int row = threadIdx.y;
+  // the 54 is necessary because of the image offset that is being
+  // applied due to the format of the bitmap
+  if ((row*(length/2)+col)<54)
+    return;
+  bmp[(row*(length/2))+col] = 1;
   
-	}
-
-
-
-
+  // initializes the value at the position
+  if(((row*(length/2))+col)%2==0)
+    {
+      bmp[(row*(length/2))+col] = 1;
+    }
+  else
+    {
+      bmp[(row*(length/2))+col] = 235;
+    }
 }
 
+int main()
+{
+  unsigned char *bmp, *dev_bmp; 
+  // mallocing space fo the bmp array, that has 3 N*N dimensions
+  bmp = (unsigned char *) malloc(length*sizeof(unsigned char));
 
-int main(){
-    
-  int i;
-  bmp=(unsigned char *) malloc(length*sizeof(unsigned char));
-   
-	
-  /* for(k=0;k<screenw;k++){ */
-  /*   for(j=0;j<screenh;j++){ */
-  /*     for (i=0; i<10; i++){ */
+  // cudaMalloc on the device
+  cudaError_t
+    err = cudaMalloc((void**)&dev_bmp, (length)*sizeof(unsigned char));
+  printf("Cuda malloc bmp:%s \n", cudaGetErrorString(err));
+		
+  // inits the memory blocks
+  BMPmake(bmp);
 
-  /*     } */
-  /*   } */
-  /* } */
+  err = cudaMemcpy(dev_bmp, bmp,
+		   (length)*sizeof(unsigned char), cudaMemcpyHostToDevice);
+  printf("Cuda memcpy to device bmp:%s \n", cudaGetErrorString(err));
+
+  // setting morphed dimensions
+  dim3 dimBlock((length-54)/2, (length-54)/2);
+  dim3 dimGrid(1, 1);
+  // timing the operation
+
   struct timeval begin, end;
-
-int *arr;
-//int N =1000;
-arr = (int *) malloc( length*sizeof(int));
-
-
-  for (i=0;i<10;i++){
-     
   gettimeofday(&begin, NULL);
-
-  bmpCUDA<<<1, length>>>(arr, length);
-  BMPwrite(true);
+  // copy the information to the device from the host
+  cudaColor <<< dimGrid, dimBlock >>>(dev_bmp);
   gettimeofday(&end, NULL);
-
+ 
+  // copy data back
+  err = cudaMemcpy(bmp, dev_bmp,
+		   (length)*sizeof(unsigned char), cudaMemcpyDeviceToHost);
+  
+  printf("Cuda memcpy to host bmp:%s \n", cudaGetErrorString(err));
+		
+  BMPwrite(bmp);
+  int verify = 0, test = length-54,j;
+  for(j=54; j<length; j++)
+    {
+      if(j%13==0) {
+	printf("value: %d\n",bmp[j]);
+	if(bmp[j] == 1) // verifying the non-colored pixel
+	  {
+	    printf("value: %d\n",bmp[j]);
+	    verify++;
+	  }
+      }else{
+	if(bmp[j] == 235) // verifying the colored pixel
+	  {
+	    verify++;
+	  }
+      }
+    }
+  if (verify == test){
+    printf("Verified!\n");
+  } else {
+    printf("pixels not correct\n");
+  }
   fprintf(stdout, "time = %lf\n", (end.tv_sec-begin.tv_sec) + (end.tv_usec-begin.tv_usec)*1.0/1000000);
- }
-
-for (i =0; i<10; i++){   
-    
- 	 gettimeofday(&begin, NULL);
-	 BMPmake(bmp);
-	 BMPwrite(false);
- 	 gettimeofday(&end, NULL);
-
-	  fprintf(stdout, "time = %lf\n", (end.tv_sec-begin.tv_sec) + (end.tv_usec-begin.tv_usec)*1.0/1000000);
-     }
-
-	free(arr);
-	free(bmp);
+		
+  // copying from the device back to the host, time to read out the results
+  printf("size of the image: %d\n", sizeof(bmp));
+  cudaFree(dev_bmp);
+  free(bmp);
   return 0;
 }
