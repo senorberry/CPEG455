@@ -3,12 +3,20 @@
 #include <sys/time.h>
 #include <stdlib.h>
 
-char bitmap[1000];
+#define N 1024
+#define length 54+(3*N*N)
+unsigned char *bmp; 
 
-int screenh=16;
-int screenw=16;
+#define screenh N
+#define screenw N
 
-void BMPmake()
+typedef struct{
+  int r;
+  int g;
+  int b;
+} color;
+
+void BMPmake(unsigned char* bitmap)
 {
   // -- FILE HEADER -- //
 
@@ -17,10 +25,10 @@ void BMPmake()
   bitmap[1] = 'M';
 
   // file size
-  bitmap[2] = 255; // 40 + 14 + 12
-  bitmap[3] = 3;
-  bitmap[4] = 0;
-  bitmap[5] = 0;
+  bitmap[2] = (length & 0xFF); 
+  bitmap[3] = (length >> 8) & 0xFF;
+  bitmap[4] = (length >> 16) & 0xFF;
+  bitmap[5] = (length >> 24) & 0xFF;
 
   // reserved field (in hex. 00 00 00 00)
   int i;
@@ -37,12 +45,24 @@ void BMPmake()
   for( i = 15; i < 18; i++) bitmap[i] = 0;
 
   // width of the image
-  bitmap[18] = 16;
-  for( i = 19; i < 22; i++) bitmap[i] = 0;
+  //bitmap[18] = N;
+  //for( i = 19; i < 22; i++) bitmap[i] = 0;
 
-  // height of the image
-  bitmap[22] = 16;
-  for( i = 23; i < 26; i++) bitmap[i] = 0;
+  bitmap[18] = N & 0xFF;
+  bitmap[19] = (N >> 8) & 0xFF;
+  bitmap[20] = (N >> 16) & 0xFF;
+  bitmap[21] = (N >> 24) & 0xFF;
+
+  fprintf(stdout,  "1: %d 2: %d 3: %d 4: %d",
+	  bitmap[18],
+	  bitmap[19],
+	  bitmap[20],
+	  bitmap[21]);
+
+  bitmap[22] = N & 0xFF;
+  bitmap[23] = (N >> 8) & 0xFF;
+  bitmap[24] = (N >> 16) & 0xFF;
+  bitmap[25] = (N >> 24) & 0xFF;
 
   // reserved field
   bitmap[26] = 1;
@@ -80,10 +100,10 @@ void BMPmake()
   for( i = 50; i < 54; i++) bitmap[i] = 0;
 
   // -- PIXEL DATA -- //
-  // where the coloration takes place
-  for( i = 54; i < 822; i++) {
-    if(i%2==0){bitmap[i] = 0;}
-    else{bitmap[i]=174;}
+  for( i = 54; i < length; i++) {
+    //pixels are written here
+    if(i%13==0){bitmap[i] = 0;}
+    else{bitmap[i]=235;}
   }
 }
 
@@ -91,25 +111,54 @@ void BMPwrite()
 {
   int i;
   FILE *file;
-  file = fopen("baseline.bmp", "w+");
-  for(i = 0; i < 822; i++)
+  file = fopen("cache.bmp", "w+");
+  for(i = 0; i < length; i++)
     {
-      fputc(bitmap[i], file);
+      putc(bmp[i], file);
     }
   fclose(file);
 }
 
 int main(){
     
+  int i=0, j=54;
+  bmp=(unsigned char *) malloc(length*sizeof(unsigned char));
   struct timeval begin, end;
-     
-  gettimeofday(&begin, NULL);
-  BMPmake();
-  BMPwrite();
-  gettimeofday(&end, NULL);
 
-  fprintf(stdout, "time = %lf\n", (end.tv_sec-begin.tv_sec) + (end.tv_usec-begin.tv_usec)*1.0/1000000);
-    
+  // testing sequence
+  for (i =0; i<10; i++){   
+    gettimeofday(&begin, NULL);
+    BMPmake(bmp);
+    BMPwrite();
+    gettimeofday(&end, NULL);
+    fprintf(stdout, "time = %lf\n", (end.tv_sec-begin.tv_sec) + (end.tv_usec-begin.tv_usec)*1.0/1000000);
+    int test = length-54;
+    int verify = 0;
+
+    // verification of the color matrix
+    for(j=54; j<length; j++)
+      {
+	if(j%13==0) {
+	  if(bmp[j] == 0) // verifying the non-colored pixel
+	    {
+	      verify++;
+	    }
+	}
+	else{
+	  if(bmp[j] == 235) // verifying the colored pixel
+	    {
+	      verify++;
+	    }
+	}
+      }
+    if (verify == test){
+      printf("Verified!\n");
+    } else {
+      printf("Constants not correct\n");
+    }
+  }
+
+  /* free(arr); */
+  free(bmp);
   return 0;
 }
-    
