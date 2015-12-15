@@ -4,17 +4,20 @@
 #include <stdlib.h>
 
 #define N 1024
-#define length 54+(3*N*N)
+#define HEADER_SIZE (54)
+#define LENGTH (3*N*N)
 
 #define screenh N
 #define screenw N
 
-void BMPwrite(unsigned char* bmp)
+typedef unsigned char byte_t;
+
+void BMPwrite(byte_t* bmp)
 {
   int i;
   FILE *file;
   file = fopen("cuda.bmp", "w+");
-  for(i = 0; i < length; i+=8)
+  for(i = 0; i < LENGTH; i+=8)
     {
       putc(bmp[i], file);
       putc(bmp[i+1], file);
@@ -28,17 +31,17 @@ void BMPwrite(unsigned char* bmp)
   fclose(file);
 }
 
-void BMPmake(unsigned char* bitmap)
+void BMPmake(byte_t* bitmap)
 {
   // bitmap signature
   bitmap[0] = 'B';
   bitmap[1] = 'M';
 
   // file size
-  bitmap[2] = length & 0xFF; // 40 + 14 + 12
-  bitmap[3] = (length >> 8) & 0xFF;
-  bitmap[4] = (length >> 16) & 0xFF;
-  bitmap[5] = (length >> 24) & 0xFF;
+  bitmap[2] = (HEADER_SIZE + LENGTH) & 0xFF; // 40 + 14 + 12
+  bitmap[3] = ((HEADER_SIZE + LENGTH) >> 8) & 0xFF;
+  bitmap[4] = ((HEADER_SIZE + LENGTH) >> 16) & 0xFF;
+  bitmap[5] = ((HEADER_SIZE + LENGTH) >> 24) & 0xFF;
 
   // reserved field (in hex. 00 00 00 00)
   int i;
@@ -95,11 +98,7 @@ void BMPmake(unsigned char* bitmap)
   // number of important colors
   for( i = 50; i < 54; i++) bitmap[i] = 0;
 
-  // THIS IS BEING OFFLOADED TO THE GPU
-  // -- PIXEL DATA -- 
-  for( i = 54; i < length; i++) {
-    bitmap[i] = 0;
-  }
+  memset (bitmap + HEADER_SIZE, LENGTH, 0);
 }
 
 // should be consuming:
@@ -108,89 +107,64 @@ void BMPmake(unsigned char* bitmap)
 // kernel forces every thread to color one character
 // to the FILE object
 
-__global__ void cudaColor(unsigned char *bmp)
-{ // only one block, whose dimension is half the length
-  int col = threadIdx.x;
-  int row = threadIdx.y;
-  // the 54 is necessary because of the image offset that is being
-  // applied due to the format of the bitmap
-  if ((row*(length/2)+col)<54)
-    return;
-  bmp[(row*(length/2))+col] = 1;
-  
-  // initializes the value at the position
-  if(((row*(length/2))+col)%2==0)
-    {
-      bmp[(row*(length/2))+col] = 1;
-    }
-  else
-    {
-      bmp[(row*(length/2))+col] = 235;
-    }
+__global__ void cudaColor (byte_t* bmp)
+{
+  int col = threadIdx.x + blockIdx.x * blockDim.x;
+  int row = threadIdx.y + blockIdx.y * blockDim.y;
+  bmp [3*(col + row * N)] = ((row & 0x20) ? 192 : 64);
+  bmp [3*(col + row * N) + 1] = ((col & 0x20) ? 192 : 64);
+  bmp [3*(col + row * N) + 2] = ((row & 0x80) || (col & 0x80) ? 192 : 64);
 }
 
 int main()
 {
-  unsigned char *bmp, *dev_bmp; 
+  
+  byte_t *bmp, *dev_bmp;
   // mallocing space fo the bmp array, that has 3 N*N dimensions
-  bmp = (unsigned char *) malloc(length*sizeof(unsigned char));
+  bmp = (byte_t*)malloc ((HEADER_SIZE + LENGTH) * sizeof (byte_t));
 
-  // cudaMalloc on the device
-  cudaError_t
-    err = cudaMalloc((void**)&dev_bmp, (length)*sizeof(unsigned char));
+  BMPmake (bmp);
+  cudaError_t err;
+
+  err= cudaMalloc ((void**)&dev_bmp, (HEADER_SIZE + LENGTH) * sizeof (byte_t));
   printf("Cuda malloc bmp:%s \n", cudaGetErrorString(err));
 		
-  // inits the memory blocks
-  BMPmake(bmp);
-
-  err = cudaMemcpy(dev_bmp, bmp,
-		   (length)*sizeof(unsigned char), cudaMemcpyHostToDevice);
+  err = cudaMemcpy (dev_bmp, bmp, (HEADER_SIZE + LENGTH) * sizeof (byte_t),
+		    cudaMemcpyHostToDevice);
   printf("Cuda memcpy to device bmp:%s \n", cudaGetErrorString(err));
 
   // setting morphed dimensions
-  dim3 dimBlock((length-54)/2, (length-54)/2);
-  dim3 dimGrid(1, 1);
-  // timing the operation
+  dim3 dimBlock (32, 32);
+  dim3 dimGrid (N / dimBlock.x, N / dimBlock.y);
 
   struct timeval begin, end;
-  gettimeofday(&begin, NULL);
-  // copy the information to the device from the host
-  cudaColor <<< dimGrid, dimBlock >>>(dev_bmp);
-  gettimeofday(&end, NULL);
+  gettimeofday (&begin, NULL);
+  cudaColor <<< dimGrid, dimBlock >>> (dev_bmp + HEADER_SIZE);
+  err = cudaPeekAtLastError();
+  printf ("Cuda kernel:%s \n", cudaGetErrorString(err));
+  gettimeofday (&end, NULL);
  
-  // copy data back
-  err = cudaMemcpy(bmp, dev_bmp,
-		   (length)*sizeof(unsigned char), cudaMemcpyDeviceToHost);
+  err = cudaMemcpy (bmp, dev_bmp, (HEADER_SIZE + LENGTH) * sizeof (byte_t),
+		    cudaMemcpyDeviceToHost);
   
   printf("Cuda memcpy to host bmp:%s \n", cudaGetErrorString(err));
 		
   BMPwrite(bmp);
-  int verify = 0, test = length-54,j;
-  for(j=54; j<length; j++)
-    {
-      if(j%13==0) {
-	printf("value: %d\n",bmp[j]);
-	if(bmp[j] == 1) // verifying the non-colored pixel
-	  {
-	    printf("value: %d\n",bmp[j]);
-	    verify++;
-	  }
-      }else{
-	if(bmp[j] == 235) // verifying the colored pixel
-	  {
-	    verify++;
-	  }
-      }
-    }
-  if (verify == test){
-    printf("Verified!\n");
+  
+  int verify = 0,j;
+  for(j = 0; j < LENGTH; j++)
+    verify += (bmp [j + HEADER_SIZE] == 235);
+  printf ("Verify count: %d\n", verify);
+  if (verify == (N * N) / 2){
+    printf ("Verified!\n");
   } else {
-    printf("pixels not correct\n");
+    printf ("pixels not correct\n");
   }
-  fprintf(stdout, "time = %lf\n", (end.tv_sec-begin.tv_sec) + (end.tv_usec-begin.tv_usec)*1.0/1000000);
-		
+  fprintf (stdout, "time = %lf\n", (end.tv_sec - begin.tv_sec) + (end.tv_usec - begin.tv_usec) * 1.0 / 1000000);
+  
   // copying from the device back to the host, time to read out the results
-  printf("size of the image: %d\n", sizeof(bmp));
+  printf ("size of the image: %d\n", sizeof(bmp));
+  
   cudaFree(dev_bmp);
   free(bmp);
   return 0;
