@@ -3,6 +3,7 @@
 #include <sys/time.h>
 #include <stdlib.h>
 
+
 char bitmap[1000];
 
 int screenh=16;
