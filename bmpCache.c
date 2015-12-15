@@ -3,22 +3,18 @@
 #include <sys/time.h>
 #include <stdlib.h>
 
-
-
-const int N=1024;
-const unsigned long length=54+3*N*N;
+#define N 1024
+#define length 54+(3*N*N)
 unsigned char *bmp; 
 
-const int screenh=N;
-const int screenw=N;
+#define screenh N
+#define screenw N
 
 typedef struct{
   int r;
   int g;
   int b;
 } color;
-
-
 
 void BMPmake(unsigned char* bitmap)
 {
@@ -29,7 +25,7 @@ void BMPmake(unsigned char* bitmap)
   bitmap[1] = 'M';
 
   // file size
-  bitmap[2] = length & 0xFF; // 40 + 14 + 12
+  bitmap[2] = (length & 0xFF); 
   bitmap[3] = (length >> 8) & 0xFF;
   bitmap[4] = (length >> 16) & 0xFF;
   bitmap[5] = (length >> 24) & 0xFF;
@@ -57,23 +53,16 @@ void BMPmake(unsigned char* bitmap)
   bitmap[20] = (N >> 16) & 0xFF;
   bitmap[21] = (N >> 24) & 0xFF;
 
-  fprintf(stdout,  "1: %c 2: %c 3: %c 4: %c",
-	  &bitmap[18],
-	  &bitmap[19],
-	  &bitmap[20] ,
-	  &bitmap[21] 
-	  );
-
-  // height of the image
-  //bitmap[22] = N;
-  //for( i = 23; i < 26; i++) bitmap[i] = 0;
+  fprintf(stdout,  "1: %d 2: %d 3: %d 4: %d",
+	  bitmap[18],
+	  bitmap[19],
+	  bitmap[20],
+	  bitmap[21]);
 
   bitmap[22] = N & 0xFF;
   bitmap[23] = (N >> 8) & 0xFF;
   bitmap[24] = (N >> 16) & 0xFF;
-  bitmap[35] = (N >> 24) & 0xFF;
-
-
+  bitmap[25] = (N >> 24) & 0xFF;
 
   // reserved field
   bitmap[26] = 1;
@@ -112,10 +101,9 @@ void BMPmake(unsigned char* bitmap)
 
   // -- PIXEL DATA -- //
   for( i = 54; i < length; i++) {
-    
     //pixels are written here
-    if(i%2==0){bitmap[i] = 0;}
-    else{bitmap[i]=255;}
+    if(i%5==0){bitmap[i] = 0;}
+    else{bitmap[i]=235;}
   }
 }
 
@@ -124,42 +112,61 @@ void BMPwrite()
   int i;
   FILE *file;
   file = fopen("bitmap.bmp", "w+");
-  for(i = 0; i < length; i++)
+  for(i = 0; i < length; i+=8)
     {
       putc(bmp[i], file);
+      putc(bmp[i+1], file);
+      putc(bmp[i+2], file);
+      putc(bmp[i+3], file);
+      putc(bmp[i+4], file);
+      putc(bmp[i+5], file);
+      putc(bmp[i+6], file);
+      putc(bmp[i+7], file);
     }
   fclose(file);
 }
 
 int main(){
     
-  int i;
+  int i=0, j=54;
   bmp=(unsigned char *) malloc(length*sizeof(unsigned char));
-   
-	
-  /* for(k=0;k<screenw;k++){ */
-  /*   for(j=0;j<screenh;j++){ */
-  /*     for (i=0; i<10; i++){ */
-
-  /*     } */
-  /*   } */
-  /* } */
   struct timeval begin, end;
 
-  int *arr;
-  //int N =1000;
-  arr = (int *) malloc( length*sizeof(int));
+  /* int *arr; */
+  /* arr = (int *) malloc( length*sizeof(int)); */
+
+  // testing sequence
   for (i =0; i<10; i++){   
-    
     gettimeofday(&begin, NULL);
     BMPmake(bmp);
     BMPwrite();
     gettimeofday(&end, NULL);
-
     fprintf(stdout, "time = %lf\n", (end.tv_sec-begin.tv_sec) + (end.tv_usec-begin.tv_usec)*1.0/1000000);
+    int test = length-54;
+    int verify = 0;
+    for(j=54;j<length;j++)
+      {
+	if(j%5==0) {
+	  if(bmp[j] == 0)
+	    {
+	      verify++;
+	    }
+	}
+	else{
+	  if(bmp[j] == 235)
+	    {
+	      verify++;
+	    }
+	}
+      }
+    if (verify == test){
+      printf("Verified!\n");
+    } else {
+      printf("Constants not correct\n");
+    }
   }
 
-  free(arr);
+  /* free(arr); */
   free(bmp);
   return 0;
 }
