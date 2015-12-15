@@ -59,12 +59,13 @@ void BMPmake(unsigned char* bitmap)
   bitmap[20] = (N >> 16) & 0xFF;
   bitmap[21] = (N >> 24) & 0xFF;
 
- fprintf(stdout,  "1: %c 2: %c 3: %c 4: %c",
+//debug
+/* fprintf(stdout,  "1: %c 2: %c 3: %c 4: %c",
  &bitmap[18],
  &bitmap[19],
  &bitmap[20] ,
  &bitmap[21] 
-);
+);*/
 
   // height of the image
   //bitmap[22] = N;
@@ -121,12 +122,20 @@ void BMPmake(unsigned char* bitmap)
   }
 }
 
-void BMPwrite()
+void BMPwrite(bool cuda)
+
 {
   int i;
   FILE *file;
-  file = fopen("bitmap.bmp", "w+");
-  for(i = 0; i < length; i++)
+if(cuda){
+  file = fopen("cuda.bmp", "w+");
+}else
+{
+
+  file = fopen("cache.bmp", "w+");
+} 
+
+ for(i = 0; i < length; i++)
     {
       putc(bmp[i], file);
     }
@@ -171,7 +180,7 @@ arr = (int *) malloc( length*sizeof(int));
   gettimeofday(&begin, NULL);
 
   bmpCUDA<<<1, length>>>(arr, length);
- // BMPwrite();
+  BMPwrite(true);
   gettimeofday(&end, NULL);
 
   fprintf(stdout, "time = %lf\n", (end.tv_sec-begin.tv_sec) + (end.tv_usec-begin.tv_usec)*1.0/1000000);
@@ -181,7 +190,7 @@ for (i =0; i<10; i++){
     
  	 gettimeofday(&begin, NULL);
 	 BMPmake(bmp);
-	 BMPwrite();
+	 BMPwrite(false);
  	 gettimeofday(&end, NULL);
 
 	  fprintf(stdout, "time = %lf\n", (end.tv_sec-begin.tv_sec) + (end.tv_usec-begin.tv_usec)*1.0/1000000);
