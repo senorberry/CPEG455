@@ -132,9 +132,6 @@ int main(){
   bmp=(unsigned char *) malloc(length*sizeof(unsigned char));
   struct timeval begin, end;
 
-  /* int *arr; */
-  /* arr = (int *) malloc( length*sizeof(int)); */
-
   // testing sequence
   for (i =0; i<10; i++){   
     gettimeofday(&begin, NULL);
@@ -144,16 +141,18 @@ int main(){
     fprintf(stdout, "time = %lf\n", (end.tv_sec-begin.tv_sec) + (end.tv_usec-begin.tv_usec)*1.0/1000000);
     int test = length-54;
     int verify = 0;
-    for(j=54;j<length;j++)
+
+    // verification of the color matrix
+    for(j=54; j<length; j++)
       {
 	if(j%5==0) {
-	  if(bmp[j] == 0)
+	  if(bmp[j] == 0) // verifying the non-colored pixel
 	    {
 	      verify++;
 	    }
 	}
 	else{
-	  if(bmp[j] == 235)
+	  if(bmp[j] == 235) // verifying the colored pixel
 	    {
 	      verify++;
 	    }
