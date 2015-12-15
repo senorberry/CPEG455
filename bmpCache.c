@@ -5,7 +5,6 @@
 
 #define N 1024
 #define length 54+(3*N*N)
-unsigned char *bmp; 
 
 #define screenh N
 #define screenw N
@@ -100,14 +99,34 @@ void BMPmake(unsigned char* bitmap)
   for( i = 50; i < 54; i++) bitmap[i] = 0;
 
   // -- PIXEL DATA -- //
-  for( i = 54; i < length; i++) {
-    //pixels are written here
+  for( i = 54; i < length; i+=8) {
     if(i%13==0){bitmap[i] = 0;}
     else{bitmap[i]=235;}
+    
+    if((i+1)%13==0){bitmap[i+1] = 0;}
+    else{bitmap[i+1]=235;}
+    
+    if((i+2)%13==0){bitmap[i+2] = 0;}
+    else{bitmap[i+2]=235;}
+    
+    if((i+3)%13==0){bitmap[i+3] = 0;}
+    else{bitmap[i+3]=235;}
+    
+    if((i+4)%13==0){bitmap[i+4] = 0;}
+    else{bitmap[i+4]=235;}
+    
+    if((i+5)%13==0){bitmap[i+5] = 0;}
+    else{bitmap[i+5]=235;}
+    
+    if((i+6)%13==0){bitmap[i+6] = 0;}
+    else{bitmap[i+6]=235;}
+
+    if((i+7)%13==0){bitmap[i+7] = 0;}
+    else{bitmap[i+7]=235;}
   }
 }
 
-void BMPwrite()
+void BMPwrite(unsigned char* bmp)
 {
   int i;
   FILE *file;
@@ -137,14 +156,14 @@ void BMPwrite()
 int main(){
     
   int i=0, j=54;
-  bmp=(unsigned char *) malloc(length*sizeof(unsigned char));
+  unsigned char* bmp=(unsigned char *) malloc(length*sizeof(unsigned char));
   struct timeval begin, end;
 
   // testing sequence
   for (i =0; i<10; i++){   
     gettimeofday(&begin, NULL);
     BMPmake(bmp);
-    BMPwrite();
+    BMPwrite(bmp);
     gettimeofday(&end, NULL);
     fprintf(stdout, "time = %lf\n", (end.tv_sec-begin.tv_sec) + (end.tv_usec-begin.tv_usec)*1.0/1000000);
     int test = length-54;
