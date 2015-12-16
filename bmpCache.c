@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 #define N 1024
-#define length 54+(3*N*N)
+#define length (54+(3*N*N))
 
 #define screenh N
 #define screenw N
@@ -133,12 +133,6 @@ void BMPwrite(unsigned char* bmp)
   file = fopen("cache.bmp", "w+");
 
   // trying to see if they can tell me the actual size of the file
-  fseek(file, 0L, SEEK_END);
-  int sz = ftell(file);
-  fseek(fp, 0L, SEEK_SET);
-
-  printf("size of the file: %d\n");
-
   for(i = 0; i < length; i+=8)
     {
       putc(bmp[i], file);
